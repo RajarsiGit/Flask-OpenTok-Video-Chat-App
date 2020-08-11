@@ -5,7 +5,6 @@
 		<meta http-equiv="Pragma" content="no-cache" />
 		<meta http-equiv="Expires" content="0" />
 		<link rel="stylesheet" type="text/css" href="/static/style.css">
-		<link rel="shortcut icon" href="/static/favicon.ico">
         <title>Login Panel</title>
     </head>
     <body>
@@ -17,8 +16,22 @@
 			{{ form.submit() }}
 		</form>
 		<script type="text/javascript">
-			document.getElementById("name").placeholder="Enter Name"
-			document.getElementById("code").placeholder="Enter Code (if you have one)"
+			var nameElement=document.getElementById("name");
+            var codeElement=document.getElementById("code");
+			var alertMsg="{{alert}}";
+			var id="{{id}}"
+			nameElement.placeholder="Enter Name"
+			codeElement.placeholder="Enter Code (if you have one)"
+			if(alertMsg != "") {
+				if(alertMsg == "Code01")
+					alert("Code does not exist! Use new code or leave empty!");
+			}
+			if(id != ""){
+				codeElement.value="{{id}}"
+				codeElement.style="display: none;"
+				var labels=document.getElementsByTagName('label');
+				labels[1].style="display: none;"
+			}
 		</script>
     </body>
 </html>

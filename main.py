@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, session, url_for, redirect, Blueprint
-from opentok import OpenTok, MediaModes
+from flask import Flask, render_template, request, session, url_for, redirect, Blueprint, send_from_directory
 from flask_wtf import FlaskForm
 from wtforms.fields import StringField, SubmitField
 from wtforms.validators import DataRequired
+from opentok import OpenTok, MediaModes
+from loginform import LoginForm
 import os
 import random
 import string
@@ -23,49 +24,89 @@ opentok = OpenTok(api_key, api_secret)
 
 sessions = dict()
 
-def generate_id():
-	return ''.join(random.choices(string.ascii_lowercase, k=3)) + '-' + ''.join(random.choices(string.ascii_lowercase, k=2)) + '-' + ''.join(random.choices(string.ascii_lowercase, k=3))
-
 class LoginForm(FlaskForm):
 	name = StringField('Name', validators=[DataRequired()])
 	code = StringField('Code', validators=[])
 	submit = SubmitField('Enter Chatroom')
 
+def generate_id():
+	return ''.join(random.choices(string.ascii_lowercase, k=3)) + '-' + ''.join(random.choices(string.ascii_lowercase, k=2)) + '-' + ''.join(random.choices(string.ascii_lowercase, k=3))
+
+@app.route('/favicon.ico') 
+def favicon(): 
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    form = LoginForm()
-    if form.validate_on_submit():
-        session['name'] = form.name.data
-        session['code'] = form.code.data
-        return redirect(url_for('.create'))
-    elif request.method == 'POST':
-        form.name.data = session.get('name', '')
-        form.code.data = session.get('code', '')
-    return render_template('index.html', form=form)
+	form = LoginForm()
+	if form.validate_on_submit():
+		session['name'] = form.name.data
+		session['code'] = form.code.data
+		return redirect(url_for('.create'))
+	elif request.method == 'POST':
+		form.name.data = session.get('name', '')
+		form.code.data = session.get('code', '')
+	return render_template('index.html', form=form)
 
-@app.route('/create')
+@app.route('/create', methods=['GET', 'POST'])
 def create():
-	name = session.get('name', '')
-	code = session.get('code', '')
-	if code == '':
-		id = generate_id()
-		opentok_session = opentok.create_session(media_mode=MediaModes.routed)
-		sessions[id] = opentok_session
+	form = LoginForm()
+	if request.method == 'GET':
+		name = session.get('name', '')
+		code = session.get('code', '')
+		if code == '':
+			id = generate_id()
+			try:
+				sessions[id] = opentok.create_session(media_mode=MediaModes.routed)
+			except Exception as e:
+				app.logger.error(e.__cause__)
+				return redirect(url_for('.create'))
+			return redirect(url_for('.chat', id=id))
+		else:
+			id = code
+			return redirect(url_for('.chat', id=id))
 	else:
-		id = code
-	session['name'] = name
-	return redirect(url_for('.chat', id=id))
+		name = form.name.data
+		code = form.code.data
+		if code == '':
+			id = generate_id()
+			try:
+				sessions[id] = opentok.create_session(media_mode=MediaModes.routed)
+			except Exception as e:
+				app.logger.error(e.__cause__)
+				return redirect(url_for('.create'))
+			return redirect(url_for('.chat', id=id))
+		else:
+			id = code
+			return redirect(url_for('.chat', id=id))
 
-@app.route('/<id>')
+@app.route('/<id>', methods=['GET', 'POST'])
 def chat(id):
-	name = session.get('name', '')
-	if name == '':
-		return redirect(url_for('.index'))
-	session_id = sessions[id].session_id
-	token = opentok.generate_token(session_id)
-	session['name'] = ''
-	session['code'] = ''
-	return render_template('chat.html', api_key=api_key, session_id=session_id, token=token, name=name)
+	form = LoginForm()
+	if request.method == 'GET':
+		name = session.get('name', '')
+		session['name'] = ''
+		session['code'] = ''
+		if name == "":
+			return render_template('index.html', id=id, form=form)
+		else:
+			session_id = sessions[id].session_id
+			try:
+				token = opentok.generate_token(session_id)
+			except Exception as e:
+				app.logger.error(e.__cause__)
+				return redirect(url_for('.chat', id=id))
+			return render_template('chat.html', api_key=api_key, session_id=session_id, token=token, name=name)
+	else:
+		name = form.name.data
+		code = form.code.data
+		session_id = sessions[id].session_id
+		try:
+			token = opentok.generate_token(session_id)
+		except Exception as e:
+			app.logger.error(e.__cause__)
+			return redirect(url_for('.chat', id=id))
+		return render_template('chat.html', api_key=api_key, session_id=session_id, token=token, name=name)
 
 if __name__ == '__main__':
-	app.run(debug=True)	
+	app.run(debug=True)
