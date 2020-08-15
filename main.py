@@ -89,8 +89,8 @@ def chat(id):
 		if name == "":
 			return render_template('index.html', id=id, form=form)
 		else:
-			session_id = sessions[id].session_id
 			try:
+				session_id = sessions[id].session_id
 				token = opentok.generate_token(session_id)
 			except Exception as e:
 				app.logger.error(e.__cause__)
@@ -101,6 +101,7 @@ def chat(id):
 		code = form.code.data
 		session_id = sessions[id].session_id
 		try:
+			session_id = sessions[id].session_id
 			token = opentok.generate_token(session_id)
 		except Exception as e:
 			app.logger.error(e.__cause__)
