@@ -82,6 +82,7 @@ def create():
 @app.route('/<id>', methods=['GET', 'POST'])
 def chat(id):
 	form = LoginForm()
+	session_id = None
 	if request.method == 'GET':
 		name = session.get('name', '')
 		session['name'] = ''
@@ -89,8 +90,8 @@ def chat(id):
 		if name == "":
 			return render_template('index.html', id=id, form=form)
 		else:
+			session_id = sessions[id].session_id
 			try:
-				session_id = sessions[id].session_id
 				token = opentok.generate_token(session_id)
 			except Exception as e:
 				app.logger.error(e.__cause__)
@@ -101,7 +102,6 @@ def chat(id):
 		code = form.code.data
 		session_id = sessions[id].session_id
 		try:
-			session_id = sessions[id].session_id
 			token = opentok.generate_token(session_id)
 		except Exception as e:
 			app.logger.error(e.__cause__)
