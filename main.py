@@ -82,7 +82,9 @@ def create():
 @app.route('/<id>', methods=['GET', 'POST'])
 def chat(id):
 	form = LoginForm()
-	session_id = None
+	current_sessions = sessions
+	if not current_sessions:
+		return redirect(url_for('.chat', id=id))
 	if request.method == 'GET':
 		name = session.get('name', '')
 		session['name'] = ''
@@ -90,7 +92,7 @@ def chat(id):
 		if name == "":
 			return render_template('index.html', id=id, form=form)
 		else:
-			session_id = sessions[id].session_id
+			session_id = current_sessions[id].session_id
 			try:
 				token = opentok.generate_token(session_id)
 			except Exception as e:
@@ -100,7 +102,7 @@ def chat(id):
 	else:
 		name = form.name.data
 		code = form.code.data
-		session_id = sessions[id].session_id
+		session_id = current_sessions[id].session_id
 		try:
 			token = opentok.generate_token(session_id)
 		except Exception as e:
