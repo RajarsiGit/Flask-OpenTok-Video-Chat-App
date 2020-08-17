@@ -53,37 +53,29 @@ def create():
 	if request.method == 'GET':
 		name = session.get('name', '')
 		code = session.get('code', '')
-		if code == '':
-			id = generate_id()
-			try:
-				sessions[id] = opentok.create_session(media_mode=MediaModes.routed)
-			except Exception as e:
-				app.logger.error(e.__cause__)
-				return redirect(url_for('.create'))
-			return redirect(url_for('.chat', id=id))
-		else:
-			id = code
-			return redirect(url_for('.chat', id=id))
 	else:
 		name = form.name.data
 		code = form.code.data
-		if code == '':
-			id = generate_id()
-			try:
-				sessions[id] = opentok.create_session(media_mode=MediaModes.routed)
-			except Exception as e:
-				app.logger.error(e.__cause__)
-				return redirect(url_for('.create'))
-			return redirect(url_for('.chat', id=id))
-		else:
-			id = code
-			return redirect(url_for('.chat', id=id))
+	if code == '':
+		id = generate_id()
+		try:
+			sessions[id] = opentok.create_session(media_mode=MediaModes.routed)
+		except Exception as e:
+			app.logger.error(e.__cause__)
+			return redirect(url_for('.create'))
+		return redirect(url_for('.chat', id=id))
+	else:
+		id = code
+		return redirect(url_for('.chat', id=id))
 
 @app.route('/<id>', methods=['GET', 'POST'])
 def chat(id):
 	form = LoginForm()
-	session_id = None
-	if not sessions:
+	try:
+		session_id = sessions[id].session_id
+		token = opentok.generate_token(session_id)
+	except Exception as e:
+		app.logger.error(e.__cause__)
 		return redirect(url_for('.create'))
 	if request.method == 'GET':
 		name = session.get('name', '')
@@ -92,22 +84,10 @@ def chat(id):
 		if name == "":
 			return render_template('index.html', id=id, form=form)
 		else:
-			try:
-				session_id = sessions[id].session_id
-				token = opentok.generate_token(session_id)
-			except Exception as e:
-				app.logger.error(e.__cause__)
-				return redirect(url_for('.chat', id=id))
 			return render_template('chat.html', api_key=api_key, session_id=session_id, token=token, name=name)
 	else:
 		name = form.name.data
 		code = form.code.data
-		try:
-			session_id = sessions[id].session_id
-			token = opentok.generate_token(session_id)
-		except Exception as e:
-			app.logger.error(e.__cause__)
-			return redirect(url_for('.chat', id=id))
 		return render_template('chat.html', api_key=api_key, session_id=session_id, token=token, name=name)
 
 if __name__ == '__main__':
